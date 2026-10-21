@@ -66,3 +66,9 @@ ASM_PFX (MainEntryPoint):
 
   // Do Infinite Spin
   b     .
+
+  // First argument of the previous stage, written once at entry
+  .align 3
+  .global ASM_PFX (gSecEntryArg0)
+ASM_PFX (gSecEntryArg0):
+  .quad 0
