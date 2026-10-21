@@ -99,6 +99,6 @@
   INF Binaries/nuwa/QcomPkg/Drivers/UsbInitDxe/UsbInitDxe.inf
   INF Binaries/nuwa/QcomPkg/Drivers/UCDxe/UCDxe.inf
   INF Binaries/nuwa/QcomPkg/Drivers/RNGDxe/RngDxe.inf
-  INF Binaries/nuwa/QcomPkg/Drivers/PILDxe/PILDxe.inf
-  INF Binaries/nuwa/QcomPkg/Drivers/PILProxyDxe/PILProxyDxe.inf
+  // INF Binaries/nuwa/QcomPkg/Drivers/PILDxe/PILDxe.inf   # probe: PIL needs a matching uefipil.cfg entry and panics otherwise; not needed for the menu
+  // INF Binaries/nuwa/QcomPkg/Drivers/PILProxyDxe/PILProxyDxe.inf   # probe: PIL needs a matching uefipil.cfg entry and panics otherwise; not needed for the menu
   INF Binaries/nuwa/QcomPkg/Drivers/SPSSDxe/SPSSDxe.inf
