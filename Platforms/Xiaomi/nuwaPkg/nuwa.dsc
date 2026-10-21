@@ -67,6 +67,8 @@
   gQcomPkgTokenSpaceGuid.PcdPlatformType|"LA"
 
 [LibraryClasses]
+  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
+  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   #
   # Memory Libraries
   #
@@ -79,6 +81,8 @@
 
 [Components]
   DarwinBootPkg/Driver/DarwinBoot.inf
+  UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  UniXNUPkg/Application/UniXNU/UniXNU.inf
   #
   # ACPI Tables
   #
