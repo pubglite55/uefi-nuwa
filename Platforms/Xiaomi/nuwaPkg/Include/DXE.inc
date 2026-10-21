@@ -39,6 +39,10 @@
   # The XNU loader is part of the firmware: a driver loaded from a volume is
   # refused by the image verification of this build.
   INF DarwinBootPkg/Driver/DarwinBoot.inf
+  # UniXNUDxe publishes the boot variables; UniXNU.efi is the application BDS
+  # launches, and it drives DarwinBoot to start the payload kernel.
+  INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
