@@ -40,7 +40,7 @@
   # refused by the image verification of this build.
   # The boot image ramdisk (the payload FAT volume) reaches UEFI as an initrd in
   # the device tree; this driver publishes it as a block device so Fat attaches.
-  INF ShengBootMemoryDxe/ShengBootMemoryDxe.inf
+  INF nuwaPkg/Drivers/ShengBootMemoryDxe/ShengBootMemoryDxe.inf
   INF DarwinBootPkg/Driver/DarwinBoot.inf
   # UniXNUDxe publishes the boot variables; UniXNU.efi is the application BDS
   # launches, and it drives DarwinBoot to start the payload kernel.
