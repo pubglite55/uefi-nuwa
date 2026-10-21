@@ -80,6 +80,7 @@
   ConfigurationMapLib|nuwaPkg/Library/ConfigurationMapLib/ConfigurationMapLib.inf
 
 [Components]
+  ShengBootMemoryDxe/ShengBootMemoryDxe.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
   UniXNUPkg/Application/UniXNU/UniXNU.inf
