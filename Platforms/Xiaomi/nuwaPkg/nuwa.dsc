@@ -78,6 +78,7 @@
   ConfigurationMapLib|nuwaPkg/Library/ConfigurationMapLib/ConfigurationMapLib.inf
 
 [Components]
+  DarwinBootPkg/Driver/DarwinBoot.inf
   #
   # ACPI Tables
   #
