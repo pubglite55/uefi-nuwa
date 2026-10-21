@@ -14,6 +14,11 @@
 
 ASM_FUNC (_ModuleEntryPoint)
   // Do Platform Specific Initialization
+  // Keep x0 for the platform. It is the address of the DT a Linux-style boot
+  // loader hands over. The slot is in this section, which is in RAM here.
+  adr   x1, ASM_PFX (gSecEntryArg0)
+  str   x0, [x1]
+
   bl    ASM_PFX (PlatformAssemblyInitialize)
 
   // Disable SPAN
