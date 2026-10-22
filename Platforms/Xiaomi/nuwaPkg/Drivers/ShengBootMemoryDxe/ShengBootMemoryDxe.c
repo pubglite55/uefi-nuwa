@@ -414,6 +414,9 @@ PublishInitrd (
   UINT64      Start;
   UINT64      End;
   EFI_HANDLE  Handle;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Desc;
+  UINT64                            MapStart;
+  UINT64                            MapSize;
 
   Chosen = FdtPathOffset (Fdt, "/chosen");
   if (Chosen < 0) {
@@ -450,6 +453,29 @@ PublishInitrd (
     //
     End -= (End - Start) % RAM_BLOCK_SIZE;
   }
+
+  //
+  // The ABL loads the ramdisk wherever it likes; on nuwa that lies above the
+  // DRAM the GCD knows about (observed start 0xAA685000). Make the range
+  // mapped read/write before anything reads the volume through BlockIo.
+  //
+  MapStart = Start & ~(UINT64)(EFI_PAGE_SIZE - 1);
+  MapSize  = ALIGN_VALUE (End, EFI_PAGE_SIZE) - MapStart;
+  if (!EFI_ERROR (gDS->GetMemorySpaceDescriptor (MapStart, &Desc))) {
+    if (Desc.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
+      gDS->AddMemorySpace (EfiGcdMemoryTypeSystemMemory, MapStart, MapSize, EFI_MEMORY_WB);
+    }
+
+    Status = gDS->SetMemorySpaceAttributes (MapStart, MapSize, EFI_MEMORY_WB);
+    if (EFI_ERROR (Status)) {
+      CHAR8  MapState[40];
+
+      AsciiSPrint (MapState, sizeof (MapState), "7:%d:%lx", (UINT32)Desc.GcdMemoryType, Desc.Attributes);
+      ReportStatus (MapState);
+      return;
+    }
+  }
+
 
   mRamBase                = (UINT8 *)(UINTN)Start;
   mMedia.MediaId          = 1;
