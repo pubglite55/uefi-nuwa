@@ -477,6 +477,25 @@ PublishInitrd (
   }
 
 
+  //
+  // Read the first sector straight from the mapped window: if this aborts or
+  // returns garbage, the address is not usable and Fat can never attach.
+  //
+  {
+    UINT8   Sector[512];
+    UINT16  Signature;
+    CHAR8   ReadState[40];
+
+    CopyMem (Sector, (VOID *)(UINTN)Start, sizeof (Sector));
+    Signature = (UINT16)(Sector[510] | (Sector[511] << 8));
+    AsciiSPrint (ReadState, sizeof (ReadState), "8:%x:%x", Signature, Sector[0]);
+    ReportStatus (ReadState);
+    if (Signature != 0xAA55) {
+      return;
+    }
+  }
+
+
   mRamBase                = (UINT8 *)(UINTN)Start;
   mMedia.MediaId          = 1;
   mMedia.RemovableMedia   = FALSE;
