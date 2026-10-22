@@ -435,7 +435,12 @@ PublishInitrd (
   End   = ReadCells (EndProp, EndLength / 4);
   if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
-    ReportStatus ("5");
+    {
+      CHAR8  State[40];
+
+      AsciiSPrint (State, sizeof (State), "5:%lx-%lx", Start, End);
+      ReportStatus (State);
+    }
     return;
   }
 
