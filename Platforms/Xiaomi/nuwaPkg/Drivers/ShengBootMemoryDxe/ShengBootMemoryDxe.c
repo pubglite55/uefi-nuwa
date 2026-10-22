@@ -401,6 +401,57 @@ ReportStatus (
 
 STATIC
 VOID
+
+STATIC
+BOOLEAN
+FindPayload (
+  OUT UINT64  *Base,
+  OUT UINT64  *Size
+  )
+{
+  EFI_STATUS                       Status;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  *Map;
+  UINTN                            MapCount;
+  UINTN                            Index;
+  UINT64                           Offset;
+  UINT8                            *Probe;
+  UINT16                           SectorSize;
+  UINT32                           TotalSectors;
+
+  Status = gDS->GetMemorySpaceMap (&MapCount, &Map);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  for (Index = 0; Index < MapCount; Index++) {
+    if ((Map[Index].GcdMemoryType != EfiGcdMemoryTypeSystemMemory) ||
+        (Map[Index].BaseAddress >= SIZE_4GB))
+    {
+      continue;
+    }
+
+    for (Offset = 0; Offset + 512 <= Map[Index].Length; Offset += 0x1000) {
+      Probe = (UINT8 *)(UINTN)(Map[Index].BaseAddress + Offset);
+      if (CompareMem (Probe + 3, "MTOO4043", 8) != 0) {
+        continue;
+      }
+
+      SectorSize   = *(UINT16 *)(Probe + 11);
+      TotalSectors = *(UINT32 *)(Probe + 32);
+      if ((SectorSize == 512) && (TotalSectors != 0)) {
+        *Base = (UINT64)(UINTN)Probe;
+        *Size = (UINT64)TotalSectors * SectorSize;
+        FreePool (Map);
+        return TRUE;
+      }
+    }
+  }
+
+  FreePool (Map);
+  return FALSE;
+}
+
+
 PublishInitrd (
   IN CONST VOID  *Fdt
   )
@@ -418,40 +469,44 @@ PublishInitrd (
   UINT64                            MapStart;
   UINT64                            MapSize;
 
-  Chosen = FdtPathOffset (Fdt, "/chosen");
-  if (Chosen < 0) {
-    DEBUG ((DEBUG_ERROR, "SHENGMEM: no /chosen\n"));
-    ReportStatus ("3");
-    return;
-  }
+  //
+  // The nuwa ABL's /chosen initrd range does not describe the ramdisk we
+  // packed: 0xAA685000 holds unrelated data and the end (0xB7FFE253) lies
+  // past a 188 MiB payload. Look the FAT volume up by its mtools OEM tag.
+  //
+  if (!FindPayload (&Start, &End)) {
+    Chosen = FdtPathOffset (Fdt, "/chosen");
+    if (Chosen < 0) {
+      DEBUG ((DEBUG_ERROR, "SHENGMEM: no /chosen
+"));
+      ReportStatus ("3");
+      return;
+    }
 
-  StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
-  EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
-  if ((StartProp == NULL) || (EndProp == NULL) ||
-      ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
-  {
-    DEBUG ((DEBUG_ERROR, "SHENGMEM: no initrd in /chosen\n"));
-    ReportStatus ("4");
-    return;
-  }
+    StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
+    EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
+    if ((StartProp == NULL) || (EndProp == NULL) ||
+        ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
+    {
+      DEBUG ((DEBUG_ERROR, "SHENGMEM: no initrd in /chosen
+"));
+      ReportStatus ("4");
+      return;
+    }
 
-  Start = ReadCells (StartProp, StartLength / 4);
-  End   = ReadCells (EndProp, EndLength / 4);
-  if (End <= Start) {
-    CHAR8  State[40];
+    Start = ReadCells (StartProp, StartLength / 4);
+    End   = ReadCells (EndProp, EndLength / 4);
+    if (End <= Start) {
+      CHAR8  State[40];
 
-    AsciiSPrint (State, sizeof (State), "5:%lx-%lx", Start, End);
-    ReportStatus (State);
-    return;
-  }
+      AsciiSPrint (State, sizeof (State), "5:%lx-%lx", Start, End);
+      ReportStatus (State);
+      return;
+    }
 
-  if (((End - Start) % RAM_BLOCK_SIZE) != 0) {
-    //
-    // The nuwa ABL reports an end past the real ramdisk that is not sector
-    // aligned (observed 0xAA685000-0xB7FFE253 for a 188 MiB payload). The FAT
-    // superblock and tables live at the start of the volume, so align down.
-    //
-    End -= (End - Start) % RAM_BLOCK_SIZE;
+    if (((End - Start) % RAM_BLOCK_SIZE) != 0) {
+      End -= (End - Start) % RAM_BLOCK_SIZE;
+    }
   }
 
   //
