@@ -400,9 +400,6 @@ ReportStatus (
 }
 
 STATIC
-VOID
-
-STATIC
 BOOLEAN
 FindPayload (
   OUT UINT64  *Base,
@@ -452,6 +449,8 @@ FindPayload (
 }
 
 
+STATIC
+VOID
 PublishInitrd (
   IN CONST VOID  *Fdt
   )
@@ -603,3 +602,4 @@ ShengBootMemoryDxeEntry (
   PublishInitrd ((VOID *)(UINTN)Dtb);
   return EFI_SUCCESS;
 }
+
