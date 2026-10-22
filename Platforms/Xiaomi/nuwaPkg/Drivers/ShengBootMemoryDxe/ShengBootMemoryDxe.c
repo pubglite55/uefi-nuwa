@@ -377,6 +377,27 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
   RamBlockFlush
 };
 
+// Bring-up diagnostic: publish the checkpoint that ShengBootMemoryDxe reached so
+// the boot manager can show it on screen (the serial DEBUG log is unreadable here).
+STATIC CONST EFI_GUID  mShngMemVendorGuid = {
+  0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
+};
+
+STATIC
+VOID
+ReportStatus (
+  IN CONST CHAR8  *State
+  )
+{
+  gRT->SetVariable (
+         (CHAR16 *)L"ShngMemSt",
+         (EFI_GUID *)&mShngMemVendorGuid,
+         EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+         AsciiStrSize (State),
+         (VOID *)State
+         );
+}
+
 STATIC
 VOID
 PublishInitrd (
@@ -440,27 +461,6 @@ PublishInitrd (
                   );
   DEBUG ((DEBUG_ERROR, "SHENGMEM: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
   ReportStatus (EFI_ERROR (Status) ? "6" : "OK");
-}
-
-// Bring-up diagnostic: publish the checkpoint that ShengBootMemoryDxe reached so
-// the boot manager can show it on screen (the serial DEBUG log is unreadable here).
-STATIC CONST EFI_GUID  mShngMemVendorGuid = {
-  0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
-};
-
-STATIC
-VOID
-ReportStatus (
-  IN CONST CHAR8  *State
-  )
-{
-  gRT->SetVariable (
-         (CHAR16 *)L"ShngMemSt",
-         (EFI_GUID *)&mShngMemVendorGuid,
-         EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-         AsciiStrSize (State),
-         (VOID *)State
-         );
 }
 
 EFI_STATUS
