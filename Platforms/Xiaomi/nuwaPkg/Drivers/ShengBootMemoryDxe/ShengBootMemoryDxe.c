@@ -477,8 +477,7 @@ PublishInitrd (
   if (!FindPayload (&Start, &End)) {
     Chosen = FdtPathOffset (Fdt, "/chosen");
     if (Chosen < 0) {
-      DEBUG ((DEBUG_ERROR, "SHENGMEM: no /chosen
-"));
+      DEBUG ((DEBUG_ERROR, "SHENGMEM: no /chosen\n"));
       ReportStatus ("3");
       return;
     }
@@ -488,8 +487,7 @@ PublishInitrd (
     if ((StartProp == NULL) || (EndProp == NULL) ||
         ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
     {
-      DEBUG ((DEBUG_ERROR, "SHENGMEM: no initrd in /chosen
-"));
+      DEBUG ((DEBUG_ERROR, "SHENGMEM: no initrd in /chosen\n"));
       ReportStatus ("4");
       return;
     }
