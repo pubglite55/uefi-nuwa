@@ -24,6 +24,8 @@
 #include <Library/FdtLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Protocol/BlockIo.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -151,6 +153,106 @@ Subtract (
 
   CopyMem (Pieces, Out, Result * sizeof (RANGE));
   return Result;
+}
+
+#define BOOTLOG_MAGIC           0x544F4F42u  // "BOOT"
+#define BOOTLOG_PARTITION_BYTES (192ULL * 1024 * 1024)
+
+//
+// nuwa has no wired UART and the kernel cannot draw before its own console
+// exists. Leave a record that the running system can read over USB instead: the
+// last block of boot_b (the 192 MiB partition whose first 188 MiB hold the
+// payload) keeps one line per start plus a counter. A stalled kernel stops the
+// counter from incrementing, a resetting one keeps raising it.
+//
+STATIC
+VOID
+WriteBootLog (
+  IN UINT64  Dtb
+  )
+{
+  EFI_STATUS             Status;
+  EFI_HANDLE             *Handles;
+  UINTN                  Count;
+  UINTN                  Index;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  EFI_BLOCK_IO_PROTOCOL  *Target;
+  EFI_BLOCK_IO_MEDIA     *Media;
+  UINT8                  *Buffer;
+  UINT64                 BootCount;
+  UINTN                  Size;
+  BOOLEAN                IsPayload;
+
+  Handles = NULL;
+  Target  = NULL;
+  Status  = gBS->LocateHandleBuffer (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &Count, &Handles);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < Count; Index++) {
+    Status = gBS->HandleProtocol (Handles[Index], &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
+    if (EFI_ERROR (Status) || (BlockIo->Media == NULL) || !BlockIo->Media->MediaPresent) {
+      continue;
+    }
+
+    Media = BlockIo->Media;
+    if ((Media->BlockSize == 0) || ((Media->LastBlock + 1) * Media->BlockSize != BOOTLOG_PARTITION_BYTES)) {
+      continue;
+    }
+
+    //
+    // boot_a is the same size, so tell them apart by the OEM name of the FAT
+    // volume that the payload carries at its start.
+    //
+    Buffer = AllocatePool (Media->BlockSize);
+    if (Buffer == NULL) {
+      continue;
+    }
+
+    IsPayload = FALSE;
+    Status    = BlockIo->ReadBlocks (BlockIo, Media->MediaId, 0, Media->BlockSize, Buffer);
+    if (!EFI_ERROR (Status)) {
+      IsPayload = (BOOLEAN)(CompareMem ((UINT8 *)Buffer + 3, "MTOO4043", 8) == 0);
+    }
+
+    FreePool (Buffer);
+    if (IsPayload) {
+      Target = BlockIo;
+      break;
+    }
+  }
+
+  FreePool (Handles);
+  if (Target == NULL) {
+    ReportStatus ("L:no");
+    return;
+  }
+
+  Size   = Target->Media->BlockSize;
+  Buffer = AllocatePool (Size);
+  if (Buffer == NULL) {
+    ReportStatus ("L:mem");
+    return;
+  }
+
+  BootCount = 1;
+  Status    = Target->ReadBlocks (Target, Target->Media->MediaId, Target->Media->LastBlock, Size, Buffer);
+  if (!EFI_ERROR (Status) && (*(UINT32 *)Buffer == BOOTLOG_MAGIC)) {
+    BootCount = *(UINT64 *)(Buffer + 8) + 1;
+  }
+
+  ZeroMem (Buffer, Size);
+  *(UINT32 *)Buffer        = BOOTLOG_MAGIC;
+  *(UINT64 *)(Buffer + 8)  = BootCount;
+  *(UINT64 *)(Buffer + 16) = Dtb;
+  AsciiSPrint ((CHAR8 *)Buffer + 64, Size - 64, "NUWABOOT count=%lu dtb=0x%lx started\n", BootCount, Dtb);
+
+  Status = Target->WriteBlocks (Target, Target->Media->MediaId, Target->Media->LastBlock, Size, Buffer);
+  FreePool (Buffer);
+  if (EFI_ERROR (Status)) {
+    ReportStatus ("L:wr");
+  }
 }
 
 STATIC
@@ -603,6 +705,8 @@ ShengBootMemoryDxeEntry (
   // remap) faults on nuwa, so keep this switch off until the memory map is
   // understood. Set it to TRUE only when the initrd path is being debugged.
   //
+  WriteBootLog (Dtb);
+
   if (mBringUpTouchMemory) {
     AddMemory ((VOID *)(UINTN)Dtb);
     PublishInitrd ((VOID *)(UINTN)Dtb);
