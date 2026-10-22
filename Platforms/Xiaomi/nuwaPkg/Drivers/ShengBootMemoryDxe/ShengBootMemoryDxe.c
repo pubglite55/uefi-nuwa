@@ -380,6 +380,8 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 
 // Bring-up diagnostic: publish the checkpoint that ShengBootMemoryDxe reached so
 // the boot manager can show it on screen (the serial DEBUG log is unreadable here).
+STATIC BOOLEAN  mBringUpTouchMemory = FALSE;
+
 STATIC CONST EFI_GUID  mShngMemVendorGuid = {
   0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
 };
@@ -595,8 +597,19 @@ ShengBootMemoryDxeEntry (
 
   DEBUG ((DEBUG_ERROR, "SHENGMEM: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
 
-  AddMemory ((VOID *)(UINTN)Dtb);
-  PublishInitrd ((VOID *)(UINTN)Dtb);
+  //
+  // The payload is published from the UFS boot_b partition, and Fat attaches it
+  // on its own. Every DRAM access made here (GCD scan for the OEM tag, initrd
+  // remap) faults on nuwa, so keep this switch off until the memory map is
+  // understood. Set it to TRUE only when the initrd path is being debugged.
+  //
+  if (mBringUpTouchMemory) {
+    AddMemory ((VOID *)(UINTN)Dtb);
+    PublishInitrd ((VOID *)(UINTN)Dtb);
+  } else {
+    ReportStatus ("0");
+  }
+
   return EFI_SUCCESS;
 }
 
