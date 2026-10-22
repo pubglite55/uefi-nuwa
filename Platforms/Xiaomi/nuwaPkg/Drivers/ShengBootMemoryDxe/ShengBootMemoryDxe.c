@@ -442,14 +442,6 @@ PublishInitrd (
   ReportStatus (EFI_ERROR (Status) ? "6" : "OK");
 }
 
-EFI_STATUS
-EFIAPI
-ShengBootMemoryDxeEntry (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
-{
-  
 // Bring-up diagnostic: publish the checkpoint that ShengBootMemoryDxe reached so
 // the boot manager can show it on screen (the serial DEBUG log is unreadable here).
 STATIC CONST EFI_GUID  mShngMemVendorGuid = {
@@ -471,7 +463,14 @@ ReportStatus (
          );
 }
 
-EFI_HOB_GUID_TYPE  *Hob;
+EFI_STATUS
+EFIAPI
+ShengBootMemoryDxeEntry (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_HOB_GUID_TYPE  *Hob;
   UINT64             Dtb;
 
   Hob = GetFirstGuidHob (&gSiliciumEntryArgHobGuid);
