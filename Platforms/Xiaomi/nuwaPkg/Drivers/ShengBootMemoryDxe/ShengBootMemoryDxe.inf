@@ -22,6 +22,7 @@
   FdtLib
   HobLib
   MemoryAllocationLib
+  PrintLib
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
