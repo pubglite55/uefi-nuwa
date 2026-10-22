@@ -25,6 +25,7 @@
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
 
@@ -395,6 +396,7 @@ PublishInitrd (
   Chosen = FdtPathOffset (Fdt, "/chosen");
   if (Chosen < 0) {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: no /chosen\n"));
+    ReportStatus ("3");
     return;
   }
 
@@ -404,6 +406,7 @@ PublishInitrd (
       ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
   {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: no initrd in /chosen\n"));
+    ReportStatus ("4");
     return;
   }
 
@@ -411,6 +414,7 @@ PublishInitrd (
   End   = ReadCells (EndProp, EndLength / 4);
   if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
+    ReportStatus ("5");
     return;
   }
 
@@ -435,6 +439,7 @@ PublishInitrd (
                   NULL
                   );
   DEBUG ((DEBUG_ERROR, "SHENGMEM: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
+  ReportStatus (EFI_ERROR (Status) ? "6" : "OK");
 }
 
 EFI_STATUS
@@ -444,18 +449,42 @@ ShengBootMemoryDxeEntry (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HOB_GUID_TYPE  *Hob;
+  
+// Bring-up diagnostic: publish the checkpoint that ShengBootMemoryDxe reached so
+// the boot manager can show it on screen (the serial DEBUG log is unreadable here).
+STATIC CONST EFI_GUID  mShngMemVendorGuid = {
+  0x5C0E4B7B, 0x31D2, 0x4E8F, { 0x9A, 0x66, 0x0B, 0x1F, 0x7D, 0x2C, 0x8E, 0x44 }
+};
+
+STATIC
+VOID
+ReportStatus (
+  IN CONST CHAR8  *State
+  )
+{
+  gRT->SetVariable (
+         (CHAR16 *)L"ShngMemSt",
+         (EFI_GUID *)&mShngMemVendorGuid,
+         EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+         AsciiStrSize (State),
+         (VOID *)State
+         );
+}
+
+EFI_HOB_GUID_TYPE  *Hob;
   UINT64             Dtb;
 
   Hob = GetFirstGuidHob (&gSiliciumEntryArgHobGuid);
   if (Hob == NULL) {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: no entry argument HOB\n"));
+    ReportStatus ("1");
     return EFI_SUCCESS;
   }
 
   Dtb = *(UINT64 *)GET_GUID_HOB_DATA (Hob);
   if ((Dtb == 0) || ((Dtb & 3) != 0) || (FdtCheckHeader ((VOID *)(UINTN)Dtb) != 0)) {
     DEBUG ((DEBUG_ERROR, "SHENGMEM: x0 0x%lx is not a device tree\n", Dtb));
+    ReportStatus ("2");
     return EFI_SUCCESS;
   }
 
