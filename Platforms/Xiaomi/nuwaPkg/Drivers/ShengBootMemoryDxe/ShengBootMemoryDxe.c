@@ -155,6 +155,12 @@ Subtract (
   return Result;
 }
 
+STATIC
+VOID
+ReportStatus (
+  IN CONST CHAR8  *State
+  );
+
 #define BOOTLOG_MAGIC           0x544F4F42u  // "BOOT"
 #define BOOTLOG_PARTITION_BYTES (192ULL * 1024 * 1024)
 
