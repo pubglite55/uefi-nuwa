@@ -422,7 +422,7 @@ FindPayload (
 
   for (Index = 0; Index < MapCount; Index++) {
     if ((Map[Index].GcdMemoryType != EfiGcdMemoryTypeSystemMemory) ||
-        (Map[Index].BaseAddress >= 0x200000000ULL))
+        (Map[Index].BaseAddress >= SIZE_4GB))
     {
       continue;
     }
@@ -513,6 +513,15 @@ PublishInitrd (
   //
   MapStart = Start & ~(UINT64)(EFI_PAGE_SIZE - 1);
   MapSize  = ALIGN_VALUE (End, EFI_PAGE_SIZE) - MapStart;
+  if (MapSize > SIZE_1GB) {
+    //
+    // The ABL reported a range far larger than any ramdisk. Remapping it would
+    // walk a huge page table and can fault; leave the rest to Fat.
+    //
+    ReportStatus ("9:big");
+    return;
+  }
+
   if (EFI_ERROR (gDS->GetMemorySpaceDescriptor (MapStart, &Desc))) {
     //
     // The range is outside the GCD map: touching it would fault. Report and
