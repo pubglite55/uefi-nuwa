@@ -434,15 +434,21 @@ PublishInitrd (
 
   Start = ReadCells (StartProp, StartLength / 4);
   End   = ReadCells (EndProp, EndLength / 4);
-  if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
-    DEBUG ((DEBUG_ERROR, "SHENGMEM: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
-    {
-      CHAR8  State[40];
+  if (End <= Start) {
+    CHAR8  State[40];
 
-      AsciiSPrint (State, sizeof (State), "5:%lx-%lx", Start, End);
-      ReportStatus (State);
-    }
+    AsciiSPrint (State, sizeof (State), "5:%lx-%lx", Start, End);
+    ReportStatus (State);
     return;
+  }
+
+  if (((End - Start) % RAM_BLOCK_SIZE) != 0) {
+    //
+    // The nuwa ABL reports an end past the real ramdisk that is not sector
+    // aligned (observed 0xAA685000-0xB7FFE253 for a 188 MiB payload). The FAT
+    // superblock and tables live at the start of the volume, so align down.
+    //
+    End -= (End - Start) % RAM_BLOCK_SIZE;
   }
 
   mRamBase                = (UINT8 *)(UINTN)Start;
