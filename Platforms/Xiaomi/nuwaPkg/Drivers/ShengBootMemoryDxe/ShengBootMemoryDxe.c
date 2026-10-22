@@ -422,7 +422,7 @@ FindPayload (
 
   for (Index = 0; Index < MapCount; Index++) {
     if ((Map[Index].GcdMemoryType != EfiGcdMemoryTypeSystemMemory) ||
-        (Map[Index].BaseAddress >= SIZE_4GB))
+        (Map[Index].BaseAddress >= 0x200000000ULL))
     {
       continue;
     }
@@ -513,38 +513,26 @@ PublishInitrd (
   //
   MapStart = Start & ~(UINT64)(EFI_PAGE_SIZE - 1);
   MapSize  = ALIGN_VALUE (End, EFI_PAGE_SIZE) - MapStart;
-  if (!EFI_ERROR (gDS->GetMemorySpaceDescriptor (MapStart, &Desc))) {
-    if (Desc.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
-      gDS->AddMemorySpace (EfiGcdMemoryTypeSystemMemory, MapStart, MapSize, EFI_MEMORY_WB);
-    }
-
-    Status = gDS->SetMemorySpaceAttributes (MapStart, MapSize, EFI_MEMORY_WB);
-    if (EFI_ERROR (Status)) {
-      CHAR8  MapState[40];
-
-      AsciiSPrint (MapState, sizeof (MapState), "7:%d:%lx", (UINT32)Desc.GcdMemoryType, Desc.Attributes);
-      ReportStatus (MapState);
-      return;
-    }
+  if (EFI_ERROR (gDS->GetMemorySpaceDescriptor (MapStart, &Desc))) {
+    //
+    // The range is outside the GCD map: touching it would fault. Report and
+    // leave the volume unpublished instead of crashing the firmware.
+    //
+    ReportStatus ("9:gcd");
+    return;
   }
 
+  if (Desc.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
+    gDS->AddMemorySpace (EfiGcdMemoryTypeSystemMemory, MapStart, MapSize, EFI_MEMORY_WB);
+  }
 
-  //
-  // Read the first sector straight from the mapped window: if this aborts or
-  // returns garbage, the address is not usable and Fat can never attach.
-  //
-  {
-    UINT8   Sector[512];
-    UINT16  Signature;
-    CHAR8   ReadState[40];
+  Status = gDS->SetMemorySpaceAttributes (MapStart, MapSize, EFI_MEMORY_WB);
+  if (EFI_ERROR (Status)) {
+    CHAR8  MapState[40];
 
-    CopyMem (Sector, (VOID *)(UINTN)Start, sizeof (Sector));
-    Signature = (UINT16)(Sector[510] | (Sector[511] << 8));
-    AsciiSPrint (ReadState, sizeof (ReadState), "8:%x:%x", Signature, Sector[0]);
-    ReportStatus (ReadState);
-    if (Signature != 0xAA55) {
-      return;
-    }
+    AsciiSPrint (MapState, sizeof (MapState), "7:%d:%lx", (UINT32)Desc.GcdMemoryType, Desc.Attributes);
+    ReportStatus (MapState);
+    return;
   }
 
 
@@ -602,4 +590,5 @@ ShengBootMemoryDxeEntry (
   PublishInitrd ((VOID *)(UINTN)Dtb);
   return EFI_SUCCESS;
 }
+
 
