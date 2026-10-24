@@ -20,6 +20,13 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: 引入 UniXNUPkg（来自 UniXNU 仓库）
+        run: |
+          git clone --depth 1 https://github.com/pubglite55/UniXNU.git /tmp/unixnu
+          cp -r /tmp/unixnu/package/UniXNUPkg ./UniXNUPkg
+          test -f UniXNUPkg/UniXNUPkg.dec
+          ls UniXNUPkg
+
       - name: 安装构建依赖
         run: bash ./setup_env.sh -p apt
 
