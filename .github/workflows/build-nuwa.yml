@@ -1,0 +1,38 @@
+name: Build UEFI for nuwa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - '.github/workflows/build-nuwa.yml'
+
+env:
+  CI_BUILD: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: 安装构建依赖
+        run: bash ./setup_env.sh -p apt
+
+      - name: 构建 nuwa UEFI
+        run: python3 build_uefi.py -d nuwa
+
+      - name: 列出产物
+        run: ls -lh Mu-* Build/*/RELEASE_CLANGPDB/FV/ 2>/dev/null || true
+
+      - name: 上传 UEFI 镜像
+        uses: actions/upload-artifact@v4
+        with:
+          name: uefi-nuwa
+          path: |
+            Mu-*
+          if-no-files-found: error
