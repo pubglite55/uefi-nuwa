@@ -20,12 +20,16 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
-      - name: 引入 UniXNUPkg（来自 UniXNU 仓库）
+      - name: 引入 UniXNUPkg 与 DarwinBootPkg
         run: |
+          set -e
           git clone --depth 1 https://github.com/pubglite55/UniXNU.git /tmp/unixnu
           cp -r /tmp/unixnu/package/UniXNUPkg ./UniXNUPkg
           test -f UniXNUPkg/UniXNUPkg.dec
-          ls UniXNUPkg
+          git clone --depth 1 https://github.com/UniXNU/DarwinBoot.git /tmp/darwinboot
+          cp -r /tmp/darwinboot/DarwinBootPkg ./DarwinBootPkg
+          test -f DarwinBootPkg/Driver/DarwinBoot.inf
+          ls UniXNUPkg DarwinBootPkg
 
       - name: 安装构建依赖
         run: bash ./setup_env.sh -p apt
