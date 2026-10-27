@@ -25,8 +25,13 @@ jobs:
           cp -r /tmp/darwinboot/DarwinBootPkg ./DarwinBootPkg
           test -f UniXNUPkg/UniXNUPkg.dec && test -f DarwinBootPkg/Driver/DarwinBoot.inf
 
-      - name: 安装构建依赖
-        run: bash ./setup_env.sh -p apt
+      - name: 安装构建依赖（直接装，跳过 setup_env 的 full-upgrade）
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git mono-devel build-essential lld uuid-dev nasm \
+            gcc-aarch64-linux-gnu python3 python3-git python3-pip gettext locales \
+            gnupg ca-certificates python3-venv clang llvm curl
+          python3 -m pip install --break-system-packages -r pip-requirements.txt
 
       - name: 构建 nuwa UEFI (DEBUG)
         run: python3 build_uefi.py -d nuwa -r DEBUG
