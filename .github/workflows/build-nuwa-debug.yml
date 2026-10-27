@@ -1,0 +1,39 @@
+name: Build UEFI for nuwa (DEBUG)
+
+on:
+  workflow_dispatch:
+
+env:
+  CI_BUILD: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: 引入 UniXNUPkg 与 DarwinBootPkg
+        run: |
+          set -e
+          git clone --depth 1 https://github.com/pubglite55/UniXNU.git /tmp/unixnu
+          cp -r /tmp/unixnu/package/UniXNUPkg ./UniXNUPkg
+          git clone --depth 1 https://github.com/UniXNU/DarwinBoot.git /tmp/darwinboot
+          cp -r /tmp/darwinboot/DarwinBootPkg ./DarwinBootPkg
+          test -f UniXNUPkg/UniXNUPkg.dec && test -f DarwinBootPkg/Driver/DarwinBoot.inf
+
+      - name: 安装构建依赖
+        run: bash ./setup_env.sh -p apt
+
+      - name: 构建 nuwa UEFI (DEBUG)
+        run: python3 build_uefi.py -d nuwa -r DEBUG
+
+      - name: 上传
+        uses: actions/upload-artifact@v4
+        with:
+          name: uefi-nuwa-debug
+          path: Mu-*
+          if-no-files-found: error
